@@ -1,0 +1,18 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ section }} · Tri-Gauge</title><link rel="stylesheet" href="{% static 'household/style.css' %}"></head>
+<body>
+<header><strong>Tri-Gauge</strong><span>Household money &amp; time</span></header>
+<nav aria-label="Main navigation">
+<a href="{% url 'dashboard' %}" {% if section == 'Dashboard' %}aria-current="page"{% endif %}>Dashboard</a>
+<a href="{% url 'ledger' %}" {% if section == 'Live Ledger' %}aria-current="page"{% endif %}>Live Ledger</a>
+<a href="{% url 'rules' %}" {% if section == 'Rules' %}aria-current="page"{% endif %}>Rules</a>
+<a href="{% url 'settings' %}" {% if section == 'Settings' %}aria-current="page"{% endif %}>Settings</a>
+</nav>
+<main><p class="label">PHASE 1 · FOUNDATION</p><h1>{{ section }}</h1>
+<p>This space is ready for future development.</p>
+<p>No bank is connected. No transactions have been imported.</p>
+<a href="{% url 'health' %}">Check application and database status</a>
+</main>
+</body></html>
