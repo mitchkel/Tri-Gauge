@@ -2,7 +2,7 @@
 
 A household money-and-time dashboard. Phase 1 provides a Django 5.2 LTS
 application, server-rendered navigation, and a persistent SQLite database.
-No UP Bank requests, classifier, or gauge visual are implemented.
+A server-side, read-only UP client is included. No classifier or gauge visual is implemented.
 
 ## Run locally
 
@@ -22,7 +22,7 @@ Only copy the example if you do not already have a `.env`. Generate a secret:
 
 Put that generated value in `.env` as `DJANGO_SECRET_KEY`. Leave
 `DJANGO_DEBUG=true` for local development. The fake `UP_BANK_TOKEN` is unused;
-do not supply a real bank token in this phase.
+leave it fake when running automated tests.
 
 ```sh
 .venv/bin/python manage.py migrate
@@ -31,7 +31,7 @@ do not supply a real bank token in this phase.
 
 On your own computer, open `http://127.0.0.1:8000/`. In the cloud, use local HTTP
 requests for validation; no public preview or deployment is configured.
-This onboarding checkout already has an ignored local `.env` and migrated database.
+Every new checkout needs its own local configuration and migrations.
 
 ## Verify
 
@@ -45,7 +45,7 @@ curl --fail http://127.0.0.1:8000/health/
 The health response should be:
 
 ```json
-{"status": "ok", "database": "ok", "bank_connection": "not_configured"}
+{"status": "ok", "database": "ok"}
 ```
 
 It queries all application tables and returns 503 with a generic message if a
@@ -79,7 +79,7 @@ provider support are deferred.
 contains fake values only. Environment variables supplied by the deployment
 platform take precedence over `.env`. Startup requires a real Django secret.
 The future `UP_BANK_TOKEN` must be read only by server-side integration code;
-Phase 1 does not read it, send it, store it, or render it. Never log environment
+Only the internal UP client reads and sends it, exclusively to the UP API. It never stores or renders it. Never log environment
 variables, settings dumps, authorization headers, or bank credentials. No secret
 entry form or browser JavaScript is included.
 
@@ -97,5 +97,70 @@ configuration are intentionally not installed yet.
 
 Complete: application structure, four placeholder screens, seven database tables
 and migration, ignored local configuration, health endpoint, and foundation tests.
-Deferred: UP Bank integration, sync jobs, classifier execution, gauge visuals,
+Deferred: transaction importing, sync jobs, classifier execution, gauge visuals,
 financial calculations, data-entry screens, authentication, and production hosting.
+
+
+## Phase 2A: deliberate UP verification
+
+Official documentation: https://developer.up.com.au/ (schema source:
+https://github.com/up-banking/api/blob/master/v1/openapi.json).
+Account mapping uses `id`, `attributes.displayName`, `attributes.balance.currencyCode`,
+and `attributes.accountType`. Balances and whole responses are discarded; schema
+changes are not needed. Parsed accounts remain in memory only and are not saved.
+
+Provide `UP_BANK_TOKEN` through the secure runtime environment configuration,
+not source files or chat. The runtime must allow HTTPS to `api.up.com.au` and
+preserve its proxy and trusted CA configuration. Do not copy a setup-only secret
+into files to make it accessible. Automated tests use only fake values:
+
+```sh
+.venv/bin/python manage.py test
+.venv/bin/python manage.py check_up
+# Deliberate live requests only when runtime credentials/network are ready:
+.venv/bin/python manage.py check_up --live
+```
+
+Without `--live`, status reports application/database readiness, token availability,
+and `up_connection: not checked`, without contacting UP. With `--live`, the command
+makes one ping, validates its response, then reads all account pages. Example
+sanitized output (illustrative, not a claim of live verification):
+
+```text
+application: ok
+database: ok
+UP_BANK_TOKEN: available
+up_connection: not checked
+up_connection: successful
+account_count: 2
+account_types: SAVER (1), TRANSACTIONAL (1)
+```
+
+Errors are sanitized and produce a nonzero command exit status. No automatic
+retries occur. Redirects are never followed; pagination must remain on HTTPS
+`api.up.com.au` port 443 at `/api/v1/accounts`. Pagination loops and more than
+100 pages fail safely. Connect/read timeouts are 5/20 seconds.
+`/health/` and ordinary pages never contact UP and do not report UP connectivity.
+There is no public endpoint to trigger bank requests. Do not enable HTTP debug
+logging, dump request objects, or run a real token with Django debug error pages.
+Runtime secrets must remain available to the management command, not just setup.
+
+### Windows (PowerShell)
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+# Only if .env does not already exist:
+Copy-Item .env.example .env
+.\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_urlsafe(48))"
+# Put the generated Django secret into your ignored .env.
+.\.venv\Scripts\python.exe manage.py migrate
+.\.venv\Scripts\python.exe manage.py test
+.\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
+```
+
+Use the same Python executable for `manage.py check_up` (or deliberate `--live`).
+Live authentication/account retrieval still require separate runtime verification.
+No transactions, sync jobs, webhooks, classification execution, gauge calculations,
+or real-account persistence are implemented. Before any financial data is served,
+resolve authentication, household authorization, production hosting, and backups.

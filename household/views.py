@@ -17,4 +17,4 @@ def health(request):
             model.objects.exists()
     except DatabaseError:
         return JsonResponse({"status": "unavailable", "database": "unavailable"}, status=503)
-    return JsonResponse({"status": "ok", "database": "ok", "bank_connection": "not_configured"})
+    return JsonResponse({"status": "ok", "database": "ok"})

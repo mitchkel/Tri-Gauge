@@ -38,5 +38,5 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-# UP_BANK_TOKEN is deliberately not loaded into Django settings or used in Phase 1.
+# UP_BANK_TOKEN is deliberately not loaded into Django settings and is read only by the server-side UP client.
 # Never log environment variables, authorization headers, or settings dumps.
